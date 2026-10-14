@@ -29,6 +29,7 @@ export default function Admin() {
           <input type="password" inputMode="numeric" placeholder="관리 비밀번호" value={pin} onChange={(e) => { setPin(e.target.value); setErr(""); }} autoFocus />
           {err && <p className="err">{err}</p>}
           <button className="btn primary">들어가기</button>
+          <a className="btn" href="/">← 전시회로 돌아가기</a>
         </form>
       </main>
     );
@@ -114,7 +115,7 @@ function Manager() {
     <main className="admin">
       <header className="admin-head">
         <h1>🌤️ 만삼 푸른하늘 사진 전시회 · 관리</h1>
-        <a className="btn" href="/" target="_blank">전시회 열어 보기 ↗</a>
+        <a className="btn" href="/">← 전시회로 돌아가기</a>
       </header>
 
       <section className="card">

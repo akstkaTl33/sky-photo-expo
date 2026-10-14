@@ -224,6 +224,7 @@ export default function Expo({ startZone = null }) {
       {!zone && (
         <>
           {canPan && hint && vw < 900 && <div className="pan-hint">👆 옆으로 밀어서 로비를 둘러보세요</div>}
+          <a className="admin-btn" href="/admin" onPointerDown={(e) => e.stopPropagation()}>⚙️ 관리자</a>
           <button className="guide-btn" onPointerDown={(e) => e.stopPropagation()} onClick={() => setGuide(true)}>❓ 관람 안내</button>
           {vw < 900 && <button className="start-btn" onPointerDown={(e) => e.stopPropagation()} onClick={() => enter(1)}>▶ 전시 시작하기</button>}
         </>
