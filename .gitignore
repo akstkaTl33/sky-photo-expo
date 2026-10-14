@@ -1,0 +1,9 @@
+node_modules
+.next
+.env*.local
+.vercel
+
+.vercel
+_shots
+npm.log
+.claude
