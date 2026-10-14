@@ -7,3 +7,4 @@ node_modules
 _shots
 npm.log
 .claude
+vercel-deploy.log
