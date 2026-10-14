@@ -63,7 +63,7 @@ export default function Expo({ startZone = null }) {
     refreshLikes();
     const t1 = setInterval(refreshPhotos, 30000);
     const t2 = setInterval(refreshLikes, 10000);
-    try { if (!startZone && !sessionStorage.getItem("sky3-guide")) { setGuide(true); sessionStorage.setItem("sky3-guide", "1"); } } catch {}
+    setGuide(true); // 사이트에 들어올 때마다 관람 안내를 먼저 띄운다
     const pop = () => {
       const m = new URLSearchParams(location.search).get("z");
       setAnim(true);
@@ -296,7 +296,8 @@ export default function Expo({ startZone = null }) {
                   <strong>{cur.title || "제목 없음"}</strong>
                   {cur.by && <span>{cur.by}</span>}
                 </div>
-                <button className={`like${liked.has(cur.id) ? " done" : ""}`} onClick={() => like(cur)}>
+                {liked.size === 0 && <div className="like-bubble">마음에 들면 ♥ 눌러 주세요!</div>}
+                <button className={`like${liked.has(cur.id) ? " done" : ""}${liked.has(cur.id) ? "" : " pulse"}`} onClick={() => like(cur)}>
                   <span className="heart">♥</span> {liked.has(cur.id) ? "좋아요 했어요" : "좋아요"} <b>{likeCount(cur)}</b>
                 </button>
               </div>
@@ -332,9 +333,15 @@ export default function Expo({ startZone = null }) {
               <li><b>전시 시작하기</b> 바닥의 「전시 시작하기」나 오른쪽 나무 표지판을 누르면 전시장 안으로 쏙 들어가요.</li>
               <li><b>작품 넘겨 보기</b> 옆으로 밀거나 ‹ › 를 누르면 다음 작품이 가운데로 크게 와요.</li>
               <li><b>가까이 보기</b> 가운데 사진을 한 번 누르면 크게 볼 수 있어요.</li>
-              <li><b>좋아요 남기기</b> ♥ 좋아요를 누르거나 사진을 두 번 톡톡 눌러 주세요.</li>
             </ol>
-            <button className="btn primary" onClick={() => setGuide(false)}>전시 보러 가기</button>
+            <div className="like-ask">
+              <div className="like-ask-heart">♥</div>
+              <div>
+                <b>마음에 드는 작품에 좋아요를 눌러 주세요!</b>
+                <p>작품 아래 <span>♥ 좋아요</span> 단추를 누르거나 사진을 두 번 톡톡 누르면 돼요. 아이들에게 큰 응원이 됩니다.</p>
+              </div>
+            </div>
+            <button className="btn primary" onClick={() => setGuide(false)}>♥ 좋아요 누르러 전시 보러 가기</button>
           </div>
         </div>
       )}

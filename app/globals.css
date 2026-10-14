@@ -88,6 +88,21 @@ input, select { font: inherit; }
 .guide-list li::before { content: counter(g); position: absolute; left: 12px; top: 10px; width: 24px; height: 24px; border-radius: 50%; background: #7cb66a; color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 13px; }
 .guide-list b { display: block; color: #3d6b2f; }
 .modal-box .btn { width: 100%; }
+.modal-box { max-height: calc(100svh - 32px); overflow-y: auto; }
+.like-ask { display: flex; gap: 12px; align-items: center; background: #fff0f3; border: 2px solid #ffc2cf; border-radius: 16px; padding: 12px 14px; margin-bottom: 16px; }
+.like-ask-heart { flex: none; width: 46px; height: 46px; border-radius: 50%; background: #ff6b8a; color: #fff; font-size: 26px; display: grid; place-items: center; animation: beat 1.2s ease-in-out infinite; }
+.like-ask b { color: #e2506f; font-size: 16px; display: block; margin-bottom: 2px; }
+.like-ask p { font-size: 14px; line-height: 1.5; }
+.like-ask span { color: #e2506f; font-weight: 800; white-space: nowrap; }
+@keyframes beat { 0%,100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
+.like.pulse { animation: likepulse 2s ease-in-out infinite; }
+@keyframes likepulse { 0%,100% { box-shadow: 0 4px 0 #ffd6df, 0 0 0 0 rgba(255,107,138,.45); } 50% { box-shadow: 0 4px 0 #ffd6df, 0 0 0 10px rgba(255,107,138,0); } }
+.like-bubble {
+  position: relative; background: #ff6b8a; color: #fff; font-weight: 800; font-size: 13px; padding: 5px 12px; border-radius: 999px;
+  margin-bottom: -4px; animation: hop 1.4s ease-in-out infinite; white-space: nowrap;
+}
+.like-bubble::after { content: ""; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #ff6b8a; border-bottom: 0; }
+@keyframes hop { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 
 /* ── 안으로 들어간 뒤: 줌인한 로비 위에 바로 전시 ── */
 .veil {
@@ -109,7 +124,7 @@ input, select { font: inherit; }
 .count { background: #fff; border-radius: 999px; padding: 8px 12px; font-weight: 800; font-size: 14px; min-width: 60px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
 .count:empty { visibility: hidden; }
 
-.carousel { position: fixed; left: 0; right: 0; top: 64px; bottom: 214px; touch-action: pan-y; }
+.carousel { position: fixed; left: 0; right: 0; top: 64px; bottom: 238px; touch-action: pan-y; }
 .loading { position: absolute; inset: 0; display: grid; place-items: center; color: #6b5338; font-weight: 700; }
 .cf-item {
   position: absolute; left: 50%; top: 50%; width: var(--slot); display: flex; justify-content: center;
@@ -131,7 +146,7 @@ input, select { font: inherit; }
 }
 @keyframes burst { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 30% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; } 100% { transform: translate(-50%,-80%) scale(1); opacity: 0; } }
 
-.caption { position: fixed; left: 0; right: 0; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 78px); height: 124px; display: flex; justify-content: center; align-items: flex-end; z-index: 10; pointer-events: none; }
+.caption { position: fixed; left: 0; right: 0; bottom: calc(max(14px, env(safe-area-inset-bottom)) + 78px); height: 150px; display: flex; justify-content: center; align-items: flex-end; z-index: 10; pointer-events: none; }
 .caption-in { display: flex; flex-direction: column; align-items: center; gap: 10px; animation: rise .45s ease; pointer-events: auto; }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .plaque {
