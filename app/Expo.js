@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ZONES, zoneOf, loadPhotos, sortPhotos, loadLikes, addLike, photoKey, getLiked, rememberLiked } from "../lib/store";
+import { ZONES, zoneOf, loadPhotos, sortPhotos, loadVotes, loadMyVotes, castVote, photoKey, loadComments, addComment, deleteComment, adminPin } from "../lib/store";
 
 // 로비 그림(1672×941) 기준 좌표
 const IW = 1672, IH = 941;
@@ -26,9 +26,10 @@ export default function Expo({ startZone = null }) {
   const [panX, setPanX] = useState(null);
   const [zone, setZone] = useState(startZone ? Number(startZone) : null);
   const [photos, setPhotos] = useState(null);
-  const [likes, setLikes] = useState({});
-  const [pending, setPending] = useState({}); // 내가 방금 누른 좋아요(서버에서 아직 안 읽힌 것) — 두 번 세지 않게 따로 둔다
-  const [liked, setLiked] = useState(new Set());
+  const [likes, setLikes] = useState({}); // { 작품키: 표 수 }
+  const [liked, setLiked] = useState(new Set()); // 이 인터넷 연결에서 투표한 작품키
+  const [comments, setComments] = useState({}); // { 작품키: [댓글] }
+  const [talk, setTalk] = useState(null); // 댓글 창을 연 작품
   const [idx, setIdx] = useState(0);
   const [dx, setDx] = useState(0);
   const [guide, setGuide] = useState(false);
@@ -40,28 +41,27 @@ export default function Expo({ startZone = null }) {
   const moved = useRef(false);
   const lastTap = useRef(0);
   const tapTimer = useRef(null);
-  const likeSince = useRef(null);
-  const seenLikes = useRef(new Set());
+  const voting = useRef(0); // 투표를 보내는 중이면 숫자를 새로 읽어 와도 덮어쓰지 않는다
 
   const refreshPhotos = useCallback(() => {
     loadPhotos().then((list) => setPhotos(sortPhotos(list.filter((p) => !p.hidden)))).catch(() => setPhotos((p) => p || []));
   }, []);
   const refreshLikes = useCallback(() => {
-    loadLikes(likeSince.current, seenLikes.current).then(({ add, last, ids }) => {
-      if (last && (!likeSince.current || last > likeSince.current)) likeSince.current = last;
-      if (ids.length) setPending((m) => { const seen = new Set(ids); const n = {}; for (const k in m) if (!seen.has(m[k])) n[k] = m[k]; return n; });
-      if (Object.keys(add).length) setLikes((m) => { const n = { ...m }; for (const k in add) n[k] = (n[k] || 0) + add[k]; return n; });
-    }).catch(() => {});
+    loadVotes().then((v) => { if (!voting.current) setLikes(v); }).catch(() => {});
+  }, []);
+  const refreshComments = useCallback(() => {
+    loadComments().then(setComments).catch(() => {});
   }, []);
 
   useEffect(() => {
     const fit = () => setSize({ vw: window.innerWidth, vh: window.innerHeight });
     fit();
     window.addEventListener("resize", fit);
-    setLiked(getLiked());
+    loadMyVotes().then(setLiked).catch(() => {});
     refreshPhotos();
     refreshLikes();
-    const t1 = setInterval(refreshPhotos, 30000);
+    refreshComments();
+    const t1 = setInterval(() => { refreshPhotos(); refreshComments(); }, 30000);
     const t2 = setInterval(refreshLikes, 10000);
     setGuide(true); // 사이트에 들어올 때마다 관람 안내를 먼저 띄운다
     const pop = () => {
@@ -71,7 +71,7 @@ export default function Expo({ startZone = null }) {
     };
     window.addEventListener("popstate", pop);
     return () => { clearInterval(t1); clearInterval(t2); window.removeEventListener("resize", fit); window.removeEventListener("popstate", pop); };
-  }, [refreshPhotos, refreshLikes, startZone]);
+  }, [refreshPhotos, refreshLikes, refreshComments, startZone]);
 
   const list = zone && photos ? photos.filter((p) => Number(p.zone) === zone) : [];
   const total = list.length + 1; // 마지막 칸은 「다음 전시관」 안내
@@ -79,6 +79,7 @@ export default function Expo({ startZone = null }) {
 
   useEffect(() => {
     const key = (e) => {
+      if (talk) { if (e.key === "Escape") setTalk(null); return; }
       if (big) { if (e.key === "Escape") setBig(null); return; }
       if (!zone) return;
       if (e.key === "ArrowRight") go(1);
@@ -105,22 +106,24 @@ export default function Expo({ startZone = null }) {
   };
 
   const like = (p) => {
-    if (liked.has(p.id)) return;
     const key = photoKey(p.id);
-    setPending((m) => ({ ...m, [key]: "…" }));
-    setLiked((s) => new Set(s).add(p.id));
-    rememberLiked(p.id);
+    if (liked.has(key)) return;
+    const bump = (d) => setLikes((m) => ({ ...m, [key]: Math.max(0, (m[key] || 0) + d) }));
+    setLiked((s) => new Set(s).add(key));
+    bump(1);
     setBurst(p.id + "|" + Date.now());
-    addLike(p.id).then((likeId) => setPending((m) => {
-      const n = { ...m };
-      if (seenLikes.current.has(likeId)) delete n[key]; else n[key] = likeId;
-      return n;
-    })).catch(() => {
-      setPending((m) => { const n = { ...m }; delete n[key]; return n; });
-      alert("좋아요를 저장하지 못했어요. 잠시 뒤 다시 눌러 주세요.");
-    });
+    voting.current++;
+    castVote(p.id).then(({ already }) => {
+      if (already) bump(-1); // 같은 인터넷 연결에서 이미 투표한 작품 — 숫자는 그대로
+    }).catch((e) => {
+      bump(-1);
+      setLiked((s) => { const n = new Set(s); n.delete(key); return n; });
+      alert(e.message + " 잠시 뒤 다시 눌러 주세요.");
+    }).finally(() => { voting.current--; });
   };
-  const likeCount = (p) => (likes[photoKey(p.id)] || 0) + (pending[photoKey(p.id)] ? 1 : 0);
+  const likeCount = (p) => likes[photoKey(p.id)] || 0;
+  const isLiked = (p) => liked.has(photoKey(p.id));
+  const talkOf = (p) => comments[photoKey(p.id)] || [];
 
   if (!size) return <div className="expo" />;
   const { vw, vh } = size;
@@ -297,9 +300,14 @@ export default function Expo({ startZone = null }) {
                   {cur.by && <span>{cur.by}</span>}
                 </div>
                 {liked.size === 0 && <div className="like-bubble">마음에 들면 ♥ 눌러 주세요!</div>}
-                <button className={`like${liked.has(cur.id) ? " done" : ""}${liked.has(cur.id) ? "" : " pulse"}`} onClick={() => like(cur)}>
-                  <span className="heart">♥</span> {liked.has(cur.id) ? "좋아요 했어요" : "좋아요"} <b>{likeCount(cur)}</b>
-                </button>
+                <div className="caption-btns">
+                  <button className={`like${isLiked(cur) ? " done" : " pulse"}`} onClick={() => like(cur)}>
+                    <span className="heart">♥</span> {isLiked(cur) ? "좋아요 했어요" : "좋아요"} <b>{likeCount(cur)}</b>
+                  </button>
+                  <button className="talk-btn" onClick={() => setTalk(cur)}>
+                    💬 댓글 <b>{talkOf(cur).length}</b>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -324,6 +332,12 @@ export default function Expo({ startZone = null }) {
         </div>
       )}
 
+      {talk && (
+        <Comments photo={talk} list={talkOf(talk)} onClose={() => setTalk(null)}
+          onAdd={(c) => setComments((m) => ({ ...m, [c.photo]: [...(m[c.photo] || []), c] }))}
+          onRemove={(c) => setComments((m) => ({ ...m, [c.photo]: (m[c.photo] || []).filter((x) => x.id !== c.id) }))} />
+      )}
+
       {guide && (
         <div className="modal" onPointerDown={(e) => e.stopPropagation()} onClick={() => setGuide(false)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
@@ -333,6 +347,7 @@ export default function Expo({ startZone = null }) {
               <li><b>전시 시작하기</b> 바닥의 「전시 시작하기」나 오른쪽 나무 표지판을 누르면 전시장 안으로 쏙 들어가요.</li>
               <li><b>작품 넘겨 보기</b> 옆으로 밀거나 ‹ › 를 누르면 다음 작품이 가운데로 크게 와요.</li>
               <li><b>가까이 보기</b> 가운데 사진을 한 번 누르면 크게 볼 수 있어요.</li>
+              <li><b>댓글 남기기</b> 작품 아래 「💬 댓글」을 누르면 응원의 말을 남길 수 있어요.</li>
             </ol>
             <div className="like-ask">
               <div className="like-ask-heart">♥</div>
@@ -345,6 +360,64 @@ export default function Expo({ startZone = null }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// 작품 하나의 댓글 창 — 내용만 쓰고, 관리자로 들어온 기기에서는 🗑로 지울 수 있다.
+function Comments({ photo, list, onClose, onAdd, onRemove }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [pin, setPin] = useState("");
+  const end = useRef(null);
+  useEffect(() => { setPin(adminPin()); }, []);
+  useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [list.length]);
+
+  const send = async (e) => {
+    e.preventDefault();
+    const body = text.trim();
+    if (!body || busy) return;
+    setBusy(true);
+    try {
+      onAdd(await addComment(photo.id, body));
+      setText("");
+    } catch (err) {
+      alert(err.message);
+    }
+    setBusy(false);
+  };
+  const remove = async (c) => {
+    if (!window.confirm("이 댓글을 지울까요?")) return;
+    try {
+      await deleteComment(c.id, pin);
+      onRemove(c);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+  const when = (t) => new Date(t).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+  return (
+    <div className="modal" onPointerDown={(e) => e.stopPropagation()} onClick={onClose}>
+      <div className="modal-box talk" onClick={(e) => e.stopPropagation()}>
+        <button className="talk-close" onClick={onClose} aria-label="닫기">✕</button>
+        <h2>💬 {photo.title || "제목 없음"}</h2>
+        <div className="talk-list">
+          {list.length === 0 && <p className="talk-empty">첫 댓글을 남겨 주세요!</p>}
+          {list.map((c) => (
+            <div key={c.id} className="talk-item">
+              <p>{c.body}</p>
+              <span>{when(c.created_at)}</span>
+              {pin && <button className="talk-del" onClick={() => remove(c)} aria-label="댓글 지우기">🗑</button>}
+            </div>
+          ))}
+          <div ref={end} />
+        </div>
+        <form className="talk-form" onSubmit={send}>
+          <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={300} rows={2} placeholder="작품에 응원의 말을 남겨 주세요" />
+          <button className="btn primary" disabled={busy || !text.trim()}>{busy ? "올리는 중…" : "올리기"}</button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -230,3 +230,25 @@ input, select { font: inherit; }
   .arrow.left { left: 4px; }
   .arrow.right { right: 4px; }
 }
+
+/* ── 투표·댓글 단추와 댓글 창 ── */
+.caption-btns { display: flex; gap: 8px; align-items: center; }
+.talk-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 999px;
+  background: #fff; border: 2px solid #c9dff0; color: #3f7fb0; font-weight: 800; font-size: 16px;
+  box-shadow: 0 4px 0 #dbeaf6; transition: transform .15s;
+}
+.talk-btn:active { transform: scale(.94); }
+.talk-btn b { background: #e8f2fb; border-radius: 999px; padding: 1px 10px; min-width: 30px; }
+.modal-box.talk { position: relative; display: flex; flex-direction: column; user-select: text; touch-action: auto; }
+.modal-box.talk h2 { font-size: 20px; padding: 0 28px; word-break: keep-all; }
+.talk-close { position: absolute; right: 14px; top: 12px; width: 34px; height: 34px; border-radius: 50%; background: #f3e7d3; color: #6b5338; }
+.talk-list { flex: 1; min-height: 120px; max-height: 45svh; overflow-y: auto; display: grid; gap: 8px; align-content: start; margin-bottom: 12px; }
+.talk-empty { text-align: center; color: #9a8467; padding: 28px 0; }
+.talk-item { position: relative; background: #fff; border-radius: 14px; padding: 10px 40px 8px 14px; border: 2px solid #f0e3cc; }
+.talk-item p { white-space: pre-wrap; word-break: break-word; line-height: 1.5; }
+.talk-item span { font-size: 12px; color: #a8957a; }
+.talk-del { position: absolute; right: 8px; top: 8px; width: 28px; height: 28px; border-radius: 50%; background: #fff0f3; }
+.talk-form { display: grid; gap: 8px; }
+.talk-form textarea { font: inherit; width: 100%; resize: none; border: 2px solid #e8d9c2; border-radius: 14px; padding: 10px 12px; background: #fff; }
+.talk-form textarea:focus { outline: none; border-color: #f0a04b; }

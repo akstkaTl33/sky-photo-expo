@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { ZONES, zoneOf, checkPin, loadPhotos, sortPhotos, addPhoto, updatePhoto, shrinkImage, uploadPhoto, loadLikes, photoKey } from "../../lib/store";
+import { ZONES, zoneOf, checkPin, rememberAdmin, adminPin, loadPhotos, sortPhotos, addPhoto, updatePhoto, shrinkImage, uploadPhoto, loadVotes, photoKey } from "../../lib/store";
 
 export default function Admin() {
   const [ok, setOk] = useState(false);
@@ -9,14 +9,14 @@ export default function Admin() {
   const [err, setErr] = useState("");
 
   useEffect(() => {
-    try { if (sessionStorage.getItem("sky3-admin") === "1") setOk(true); } catch {}
+    if (adminPin()) setOk(true);
   }, []);
 
   const login = async (e) => {
     e.preventDefault();
     if (await checkPin(pin)) {
       setOk(true);
-      try { sessionStorage.setItem("sky3-admin", "1"); } catch {}
+      rememberAdmin(pin);
     } else setErr("비밀번호가 맞지 않아요.");
   };
 
@@ -50,8 +50,7 @@ function Manager() {
   const refresh = async () => {
     const list = await loadPhotos();
     setPhotos(sortPhotos(list));
-    const { add } = await loadLikes();
-    setLikes(add);
+    setLikes(await loadVotes());
   };
   useEffect(() => {
     refresh().catch((e) => alert(e.message));
