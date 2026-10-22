@@ -169,7 +169,7 @@ function Manager() {
               ))}
             </div>
             <button className="btn primary big" disabled={!!busy} onClick={publish}>
-              {busy || `🖼️ 「${zoneOf(zone).name}」에 ${drafts.length}점 전시하기`}
+              {busy || `🖼️ 「${zoneOf(zones, zone).name}」에 ${drafts.length}점 전시하기`}
             </button>
           </>
         )}
