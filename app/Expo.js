@@ -30,7 +30,9 @@ export default function Expo({ startZone = null }) {
   const [photos, setPhotos] = useState(null);
   const [zones, setZones] = useState(null); // 관리 화면에서 정한 전시관 (숨긴 것 포함)
   const [likes, setLikes] = useState({}); // { 작품키: 표 수 }
-  const [liked, setLiked] = useState(new Set()); // 이 인터넷 연결에서 투표한 작품키
+  const [liked, setLiked] = useState(new Set()); // 이 인터넷 연결에서 오늘 좋아요한 작품키
+  const [left, setLeft] = useState(null); // 오늘 남은 좋아요 수 (모르면 null)
+  const [daily, setDaily] = useState(10);
   const [comments, setComments] = useState({}); // { 작품키: [댓글] }
   const [talk, setTalk] = useState(null); // 댓글 창을 연 작품
   const [idx, setIdx] = useState(0);
@@ -63,7 +65,7 @@ export default function Expo({ startZone = null }) {
     const fit = () => setSize({ vw: window.innerWidth, vh: window.innerHeight });
     fit();
     window.addEventListener("resize", fit);
-    loadMyVotes().then(setLiked).catch(() => {});
+    loadMyVotes().then((m) => { setLiked(m.voted); setLeft(m.left); if (m.daily) setDaily(m.daily); }).catch(() => {});
     refreshPhotos();
     refreshLikes();
     refreshComments();
@@ -124,16 +126,26 @@ export default function Expo({ startZone = null }) {
   const like = (p) => {
     const key = photoKey(p.id);
     if (liked.has(key)) return;
+    if (left === 0) return alert(`오늘은 좋아요 ${daily}개를 다 눌렀어요. 내일 다시 눌러 주세요!`);
     const bump = (d) => setLikes((m) => ({ ...m, [key]: Math.max(0, (m[key] || 0) + d) }));
+    const unmark = () => setLiked((s) => { const n = new Set(s); n.delete(key); return n; });
     setLiked((s) => new Set(s).add(key));
+    if (left != null) setLeft(left - 1);
     bump(1);
     setBurst(p.id + "|" + Date.now());
     voting.current++;
-    castVote(p.id).then(({ already }) => {
-      if (already) bump(-1); // 같은 인터넷 연결에서 이미 투표한 작품 — 숫자는 그대로
+    castVote(p.id).then((j) => {
+      if (j.left != null) setLeft(j.left);
+      if (j.already) bump(-1); // 같은 인터넷 연결에서 오늘 이미 누른 작품 — 숫자는 그대로
+      if (j.limit) {
+        bump(-1);
+        unmark();
+        alert(`오늘은 좋아요 ${daily}개를 다 눌렀어요. 내일 다시 눌러 주세요!`);
+      }
     }).catch((e) => {
       bump(-1);
-      setLiked((s) => { const n = new Set(s); n.delete(key); return n; });
+      unmark();
+      if (left != null) setLeft((n) => n + 1);
       alert(e.message + " 잠시 뒤 다시 눌러 주세요.");
     }).finally(() => { voting.current--; });
   };
@@ -341,6 +353,7 @@ export default function Expo({ startZone = null }) {
                     💬 댓글 <b>{talkOf(cur).length}</b>
                   </button>
                 </div>
+                {left != null && <div className="like-left">오늘 남은 좋아요 <b>{left}</b> / {daily}</div>}
               </div>
             )}
           </div>
@@ -386,7 +399,7 @@ export default function Expo({ startZone = null }) {
               <div className="like-ask-heart">♥</div>
               <div>
                 <b>마음에 드는 작품에 좋아요를 눌러 주세요!</b>
-                <p>작품 아래 <span>♥ 좋아요</span> 단추를 누르거나 사진을 두 번 톡톡 누르면 돼요. 아이들에게 큰 응원이 됩니다.</p>
+                <p>작품 아래 <span>♥ 좋아요</span> 단추를 누르거나 사진을 두 번 톡톡 누르면 돼요. 하루에 {daily}개까지, 같은 작품은 하루 한 번 누를 수 있어요. 아이들에게 큰 응원이 됩니다.</p>
               </div>
             </div>
             <button className="btn primary" onClick={() => setGuide(false)}>♥ 좋아요 누르러 전시 보러 가기</button>

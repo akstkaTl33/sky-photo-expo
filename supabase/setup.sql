@@ -45,3 +45,5 @@ insert into storage.buckets (id, name, public) values ('expo-photos', 'expo-phot
   on conflict (id) do nothing;
 drop policy if exists "사진 올리기" on storage.objects;
 create policy "사진 올리기" on storage.objects for insert to anon with check (bucket_id = 'expo-photos');
+
+-- 좋아요를 하루 10개·작품마다 하루 1번으로 바꾸는 설정은 daily-votes.sql 에 있다 (이 파일 다음에 실행).
