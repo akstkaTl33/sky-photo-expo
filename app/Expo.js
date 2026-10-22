@@ -234,14 +234,18 @@ export default function Expo({ startZone = null }) {
         })}
         {!zone && (
           <>
-            {zones && boards.map((b) => (
-              <button key={b.key} className="sign-board" style={{ left: b.x * k, top: b.y * k, width: b.w * k, height: b.h * k, fontSize: Math.min(b.h * 0.34, 26) * k, "--c": b.z?.color || "#c99a5b" }}
-                onClick={tapLobby(b.z ? () => enter(b.z.z) : b.act)} aria-label={b.z ? `${b.z.name} 전시관으로 들어가기` : b.name}>
-                <i>{b.z ? b.z.icon : b.icon}</i>
-                <span>{b.z ? b.z.name : b.name}</span>
-                {b.z && <em>{counts[b.z.z] || 0}점</em>}
-              </button>
-            ))}
+            {zones && boards.map((b) => {
+              const name = b.z ? b.z.name : b.name;
+              // 글자 수에 맞춰 판 안에 다 들어가게 줄인다 (그림 동그라미·화살표 끝 몫 약 3.6글자)
+              const fs = Math.min(b.h * 0.34, 25, b.w / (name.length + 3.6));
+              return (
+                <button key={b.key} className="sign-board" style={{ left: b.x * k, top: b.y * k, width: b.w * k, height: b.h * k, fontSize: fs * k, "--c": b.z?.color || "#c99a5b" }}
+                  onClick={tapLobby(b.z ? () => enter(b.z.z) : b.act)} aria-label={b.z ? `${name} 전시관으로 들어가기` : name}>
+                  <i>{b.z ? b.z.icon : b.icon}</i>
+                  <span>{name}</span>
+                </button>
+              );
+            })}
             <button className="spot start" style={{ left: START.x * k, top: START.y * k, width: START.w * k, height: START.h * k }}
               onClick={tapLobby(() => enter(first))} aria-label="전시 시작하기" />
             <button className="spot board" style={{ left: 30 * k, top: 330 * k, width: 330 * k, height: 470 * k }}
