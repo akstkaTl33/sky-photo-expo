@@ -7,7 +7,7 @@ export const metadata = {
   openGraph: {
     title: "제3회 만삼 푸른하늘 사진 전시회",
     description: "국공립만촌삼정에듀파크어린이집 온라인 사진 전시회에 초대합니다.",
-    images: ["/og.jpg"],
+    images: [{ url: "/og-v2.jpg", width: 1200, height: 630 }],
   },
 };
 
