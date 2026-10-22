@@ -27,6 +27,9 @@ export async function POST(req) {
   if (!admin) return noSecret();
   const { photo } = await req.json().catch(() => ({}));
   if (!okPhoto(photo)) return fail("작품을 찾지 못했어요.");
+  // 오늘 이미 누른 작품인지 먼저 본다 (개수를 다 쓴 날에도 「이미 눌렀어요」가 맞는 답이다).
+  const before = await mine(req).catch(() => []);
+  if (before.includes(photo)) return Response.json({ ok: true, already: true, left: Math.max(0, DAILY - before.length) });
   const { error } = await admin.from("expo_votes").insert({ photo, voter: voterOf(req), day: today() });
   if (error && error.code !== "23505" && !/daily_limit/.test(error.message)) return fail(error.message, 500);
   const voted = await mine(req).catch(() => null);
