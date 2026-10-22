@@ -252,3 +252,33 @@ input, select { font: inherit; }
 .talk-form { display: grid; gap: 8px; }
 .talk-form textarea { font: inherit; width: 100%; resize: none; border: 2px solid #e8d9c2; border-radius: 14px; padding: 10px 12px; background: #fff; }
 .talk-form textarea:focus { outline: none; border-color: #f0a04b; }
+
+/* ── 관리: 전시관 관리 ── */
+.halls { display: grid; gap: 10px; margin: 10px 0 12px; }
+.hall-row { display: grid; grid-template-columns: 52px 1fr; gap: 8px; background: #fbf6ec; border-radius: 14px; padding: 10px; border-left: 6px solid var(--c); }
+.hall-row.hid { opacity: .55; }
+.hall-row .hall-icon { text-align: center; font-size: 22px; padding: 6px 0; }
+.hall-row .hall-colors, .hall-row .item-row { grid-column: 1 / -1; }
+.hall-colors { display: flex; gap: 8px; }
+.swatch { width: 28px; height: 28px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px #e0d2bb; }
+.swatch.on { box-shadow: 0 0 0 3px #5b4630; }
+.hall-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.btn.danger { color: #c2415d; border-color: #f3c6d0; }
+
+/* ── 로비 나무 표지판 위에 덧댄 전시관 이름판 ── */
+.sign-board {
+  position: absolute; display: flex; align-items: center; gap: .35em; padding: 0 1.25em 0 .3em;
+  background: linear-gradient(180deg, #f8e4c3 0%, #ecca97 55%, #dcb27a 100%);
+  clip-path: polygon(0 0, calc(100% - .95em) 0, 100% 50%, calc(100% - .95em) 100%, 0 100%);
+  border-radius: .35em 0 0 .35em; color: #5a3c1e; font-family: Jua, sans-serif; line-height: 1.1;
+  box-shadow: inset 0 -.14em 0 rgba(120, 80, 30, .28), inset 0 .1em 0 rgba(255, 255, 255, .6);
+  transition: filter .15s;
+}
+.sign-board:hover { filter: brightness(1.05); }
+.sign-board:active { filter: brightness(.95); }
+.sign-board i {
+  flex: none; width: 1.55em; height: 1.55em; border-radius: 50%; background: #fffaf0; font-style: normal;
+  display: grid; place-items: center; font-size: .9em; box-shadow: inset 0 0 0 .13em var(--c);
+}
+.sign-board span { flex: 1; min-width: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sign-board em { flex: none; font-style: normal; font-size: .6em; color: #7a5a35; background: rgba(255, 255, 255, .55); border-radius: 999px; padding: .15em .55em; }

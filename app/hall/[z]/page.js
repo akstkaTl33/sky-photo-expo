@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 export default function Hall() {
   const { z } = useParams();
   useEffect(() => {
-    location.replace(["1", "2", "3"].includes(z) ? `/?z=${z}` : "/");
+    location.replace(/^\d+$/.test(z) ? `/?z=${z}` : "/");
   }, [z]);
   return <div className="expo" />;
 }

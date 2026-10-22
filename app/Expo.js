@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ZONES, zoneOf, loadPhotos, sortPhotos, loadVotes, loadMyVotes, castVote, photoKey, loadComments, addComment, deleteComment, adminPin } from "../lib/store";
+import { loadZones, visibleZones, zoneOf, loadPhotos, sortPhotos, loadVotes, loadMyVotes, castVote, photoKey, loadComments, addComment, deleteComment, adminPin } from "../lib/store";
 
 // 로비 그림(1672×941) 기준 좌표
 const IW = 1672, IH = 941;
@@ -9,6 +9,8 @@ const SIGNS = [
   { z: 2, x: 1400, y: 526, w: 258, h: 84 },
   { z: 3, x: 1400, y: 614, w: 258, h: 86 },
 ];
+// 전시관이 4개일 때: 같은 기둥에 판 4개를 조금 좁게 나눠 단다.
+const BOARD4 = (i) => ({ x: 1398, y: 436 + i * 67, w: 262, h: 62 });
 const START = { x: 690, y: 765, w: 440, h: 120 };
 // 로비 안쪽 흰 벽에 미리 걸어 두는 작은 액자 자리
 const WALL = [
@@ -26,6 +28,7 @@ export default function Expo({ startZone = null }) {
   const [panX, setPanX] = useState(null);
   const [zone, setZone] = useState(startZone ? Number(startZone) : null);
   const [photos, setPhotos] = useState(null);
+  const [zones, setZones] = useState(null); // 관리 화면에서 정한 전시관 (숨긴 것 포함)
   const [likes, setLikes] = useState({}); // { 작품키: 표 수 }
   const [liked, setLiked] = useState(new Set()); // 이 인터넷 연결에서 투표한 작품키
   const [comments, setComments] = useState({}); // { 작품키: [댓글] }
@@ -49,6 +52,9 @@ export default function Expo({ startZone = null }) {
   const refreshLikes = useCallback(() => {
     loadVotes().then((v) => { if (!voting.current) setLikes(v); }).catch(() => {});
   }, []);
+  const refreshZones = useCallback(() => {
+    loadZones().then(setZones).catch(() => {});
+  }, []);
   const refreshComments = useCallback(() => {
     loadComments().then(setComments).catch(() => {});
   }, []);
@@ -61,19 +67,29 @@ export default function Expo({ startZone = null }) {
     refreshPhotos();
     refreshLikes();
     refreshComments();
-    const t1 = setInterval(() => { refreshPhotos(); refreshComments(); }, 30000);
+    refreshZones();
+    const t1 = setInterval(() => { refreshPhotos(); refreshComments(); refreshZones(); }, 30000);
     const t2 = setInterval(refreshLikes, 10000);
     setGuide(true); // 사이트에 들어올 때마다 관람 안내를 먼저 띄운다
     const pop = () => {
       const m = new URLSearchParams(location.search).get("z");
       setAnim(true);
-      setZone(["1", "2", "3"].includes(m) ? Number(m) : null);
+      setZone(/^\d+$/.test(m || "") ? Number(m) : null);
     };
     window.addEventListener("popstate", pop);
     return () => { clearInterval(t1); clearInterval(t2); window.removeEventListener("resize", fit); window.removeEventListener("popstate", pop); };
-  }, [refreshPhotos, refreshLikes, refreshComments, startZone]);
+  }, [refreshPhotos, refreshLikes, refreshComments, refreshZones, startZone]);
 
-  const list = zone && photos ? photos.filter((p) => Number(p.zone) === zone) : [];
+  // 관람객에게는 숨기지 않은 전시관과 그 안의 작품만 보인다. 보이는 전시관이 1개면 전시관 구분 없이 한 곳에 건다.
+  const shown = zones ? visibleZones(zones) : [];
+  const single = shown.length === 1;
+  const seen = photos && zones ? photos.filter((p) => shown.some((z) => z.z === Number(p.zone))) : null;
+  const first = shown[0]?.z;
+  useEffect(() => {
+    if (zones && zone && !shown.some((z) => z.z === zone)) setZone(null); // 숨기거나 지운 전시관 주소로 들어온 경우
+  }, [zones, zone]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const list = zone && seen ? seen.filter((p) => Number(p.zone) === zone) : [];
   const total = list.length + 1; // 마지막 칸은 「다음 전시관」 안내
   const go = useCallback((d) => setIdx((i) => Math.max(0, Math.min(total - 1, i + d))), [total]);
 
@@ -91,7 +107,7 @@ export default function Expo({ startZone = null }) {
   });
 
   const enter = (z, at = 0) => {
-    if (zone === z) return;
+    if (!z || zone === z) return;
     setAnim(true);
     setIdx(at);
     setZone(z);
@@ -184,10 +200,20 @@ export default function Expo({ startZone = null }) {
   };
 
   const counts = {};
-  (photos || []).forEach((p) => (counts[p.zone] = (counts[p.zone] || 0) + 1));
-  const wallPhotos = (photos || []).slice(0, WALL.length);
-  const zn = zone ? zoneOf(zone) : null;
-  const next = zn ? ZONES[zn.z % ZONES.length] : null;
+  (seen || []).forEach((p) => (counts[p.zone] = (counts[p.zone] || 0) + 1));
+  const wallPhotos = (seen || []).slice(0, WALL.length);
+  const zn = zone && zones ? zoneOf(zones, zone) : null;
+  const next = zn && !single ? shown[(shown.findIndex((z) => z.z === zn.z) + 1) % shown.length] : null;
+
+  // 로비 나무 표지판: 그림 속 판 3개 위에 같은 모양의 판을 덧대 전시관 이름을 적는다.
+  // 전시관이 4개면 판 4개를 좁게 다시 나누고, 3개보다 적으면 남는 판에 안내·시작 단추를 단다.
+  const boards = shown.length > 3
+    ? shown.map((z, i) => ({ key: z.z, ...BOARD4(i), z }))
+    : [
+        ...shown.map((z) => ({ z })),
+        { key: "guide", icon: "❓", name: "관람 안내", act: () => setGuide(true) },
+        { key: "go", icon: "♥", name: "투표하러 가기", act: () => enter(first) },
+      ].slice(0, 3).map((b, i) => ({ key: b.z ? b.z.z : b.key, x: SIGNS[i].x, y: SIGNS[i].y, w: SIGNS[i].w, h: SIGNS[i].h, ...b }));
   const pos = idx - dx / spacing;
   const cur = list[idx];
 
@@ -200,7 +226,7 @@ export default function Expo({ startZone = null }) {
           if (!p) return null;
           return (
             <button key={p.id} className="wall-frame" style={{ left: s.x * k, top: s.y * k, width: s.w * k, height: s.h * k }}
-              onClick={tapLobby(() => enter(Number(p.zone), Math.max(0, photos.filter((q) => Number(q.zone) === Number(p.zone)).findIndex((q) => q.id === p.id))))}
+              onClick={tapLobby(() => enter(Number(p.zone), Math.max(0, seen.filter((q) => Number(q.zone) === Number(p.zone)).findIndex((q) => q.id === p.id))))}
               aria-label={`${p.title} 보러 가기`} tabIndex={zone ? -1 : 0}>
               <img src={p.img} alt="" draggable={false} />
             </button>
@@ -208,15 +234,16 @@ export default function Expo({ startZone = null }) {
         })}
         {!zone && (
           <>
-            {SIGNS.map((sg) => (
-              <button key={sg.z} className="spot" style={{ left: sg.x * k, top: sg.y * k, width: sg.w * k, height: sg.h * k }}
-                onClick={tapLobby(() => enter(sg.z))} aria-label={`${zoneOf(sg.z).name} 전시관으로 들어가기`} />
-            ))}
-            {SIGNS.map((sg) => (
-              <span key={"n" + sg.z} className="spot-count" style={{ left: (sg.x + 14) * k, top: (sg.y + 8) * k, fontSize: Math.max(11, 22 * k) }}>{counts[sg.z] || 0}점</span>
+            {zones && boards.map((b) => (
+              <button key={b.key} className="sign-board" style={{ left: b.x * k, top: b.y * k, width: b.w * k, height: b.h * k, fontSize: Math.min(b.h * 0.34, 26) * k, "--c": b.z?.color || "#c99a5b" }}
+                onClick={tapLobby(b.z ? () => enter(b.z.z) : b.act)} aria-label={b.z ? `${b.z.name} 전시관으로 들어가기` : b.name}>
+                <i>{b.z ? b.z.icon : b.icon}</i>
+                <span>{b.z ? b.z.name : b.name}</span>
+                {b.z && <em>{counts[b.z.z] || 0}점</em>}
+              </button>
             ))}
             <button className="spot start" style={{ left: START.x * k, top: START.y * k, width: START.w * k, height: START.h * k }}
-              onClick={tapLobby(() => enter(1))} aria-label="전시 시작하기" />
+              onClick={tapLobby(() => enter(first))} aria-label="전시 시작하기" />
             <button className="spot board" style={{ left: 30 * k, top: 330 * k, width: 330 * k, height: 470 * k }}
               onClick={tapLobby(() => setGuide(true))} aria-label="전시 관람 안내" />
           </>
@@ -229,12 +256,12 @@ export default function Expo({ startZone = null }) {
           {canPan && hint && vw < 900 && <div className="pan-hint">👆 옆으로 밀어서 로비를 둘러보세요</div>}
           <a className="admin-btn" href="/admin" onPointerDown={(e) => e.stopPropagation()}>⚙️ 관리자</a>
           <button className="guide-btn" onPointerDown={(e) => e.stopPropagation()} onClick={() => setGuide(true)}>❓ 관람 안내</button>
-          {vw < 900 && <button className="start-btn" onPointerDown={(e) => e.stopPropagation()} onClick={() => enter(1)}>▶ 전시 시작하기</button>}
+          {vw < 900 && <button className="start-btn" onPointerDown={(e) => e.stopPropagation()} onClick={() => enter(first)}>▶ 전시 시작하기</button>}
         </>
       )}
 
       {/* ── 전시관 안(줌인한 로비 위에 바로 전시) ── */}
-      {zone && (
+      {zone && zn && (
         <>
           <div className="veil" />
           <header className="hall-top" onPointerDown={(e) => e.stopPropagation()}>
@@ -282,7 +309,9 @@ export default function Expo({ startZone = null }) {
                     ) : (
                       <><div className="end-emoji">🌈</div><h2>「{zn.name}」 관람을 마쳤어요!</h2><p>마음에 드는 작품에 좋아요를 남기셨나요?</p></>
                     )}
-                    <button className="btn primary" style={{ "--c": next.color }} onClick={() => enter(next.z)}>다음 전시관 · {next.name} →</button>
+                    {next
+                      ? <button className="btn primary" style={{ "--c": next.color }} onClick={() => enter(next.z)}>다음 전시관 · {next.name} →</button>
+                      : list.length > 0 && <button className="btn primary" style={{ "--c": zn.color }} onClick={() => setIdx(0)}>↺ 처음부터 다시 보기</button>}
                     <button className="btn" onClick={leave}>로비로 나가기</button>
                   </div>
                 </div>
@@ -314,15 +343,15 @@ export default function Expo({ startZone = null }) {
         </>
       )}
 
-      <nav className={`hall-tabs${!zone && vw >= 900 && vw / vh > 1.45 ? " wide" : ""}`} onPointerDown={(e) => e.stopPropagation()}>
-        {ZONES.map((z) => (
+      {shown.length > 1 && <nav className={`hall-tabs${!zone && vw >= 900 && vw / vh > 1.45 ? " wide" : ""}`} onPointerDown={(e) => e.stopPropagation()}>
+        {shown.map((z) => (
           <button key={z.z} className={zone === z.z ? "on" : ""} style={{ "--c": z.color }} onClick={() => enter(z.z)}>
             <b>{z.icon}</b>
             <span>{z.name}</span>
             <i>{counts[z.z] || 0}점</i>
           </button>
         ))}
-      </nav>
+      </nav>}
 
       {big && (
         <div className="lightbox" onPointerDown={(e) => e.stopPropagation()} onClick={() => setBig(null)}>

@@ -7,7 +7,7 @@ export default function Home() {
   const [z, setZ] = useState(undefined);
   useEffect(() => {
     const m = new URLSearchParams(location.search).get("z");
-    setZ(["1", "2", "3"].includes(m) ? Number(m) : null);
+    setZ(/^\d+$/.test(m || "") ? Number(m) : null);
   }, []);
   if (z === undefined) return <div className="expo" />;
   return <Expo startZone={z} />;
