@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { DEFAULT_ZONES, MAX_ZONES, COLORS, loadZones, saveZones, zoneOf, checkPin, rememberAdmin, adminPin, loadPhotos, sortPhotos, addPhoto, updatePhoto, shrinkImage, uploadPhoto, loadVotes, photoKey, thumbOf, THUMB_PX } from "../../lib/store";
+import { DEFAULT_ZONES, MAX_ZONES, COLORS, loadZones, saveZones, zoneOf, checkPin, rememberAdmin, adminPin, loadPhotos, sortPhotos, addPhoto, updatePhoto, shrinkImage, uploadPhoto, loadVotes, photoKey, thumbOf, THUMB_PX, votingOpen, VOTE_END_TEXT } from "../../lib/store";
 
 export default function Admin() {
   const [ok, setOk] = useState(false);
@@ -139,6 +139,8 @@ function Manager() {
           </div>
         </div>
       </section>
+
+      <TopFive photos={photos} zones={zones} likes={likes} />
 
       <HallManager zones={zones} photos={photos} onSaved={(zs) => { setZones(zs); setZone((z) => (zs.some((x) => x.z === z) ? z : zs[0].z)); setView((z) => (zs.some((x) => x.z === z) ? z : zs[0].z)); }} />
 
@@ -297,6 +299,45 @@ function HallManager({ zones, photos, onSaved }) {
         <button className="btn primary" disabled={!dirty || busy} onClick={save}>{busy ? "저장하는 중…" : "💾 저장"}</button>
       </div>
       {list === DEFAULT_ZONES && <p className="tip">처음 설정이에요. 이름을 바꾸고 저장하면 전시회에 바로 반영돼요.</p>}
+    </section>
+  );
+}
+
+// 마감 뒤에 관리 화면에서만 보여 주는 좋아요 순위. 관람객에게 보이는 작품만 세고, 좋아요가 같으면 같은 등수로 함께 보여 준다.
+function TopFive({ photos, zones, likes }) {
+  if (votingOpen()) {
+    return (
+      <section className="card">
+        <h2>🏆 좋아요 TOP 5</h2>
+        <p className="tip">{VOTE_END_TEXT} 마감 뒤에 이 화면을 새로고침하면 순위가 나와요.</p>
+      </section>
+    );
+  }
+  const shown = zones.filter((z) => !z.hidden);
+  const scored = photos
+    .filter((p) => !p.hidden && shown.some((z) => z.z === Number(p.zone)))
+    .map((p) => ({ p, n: likes[photoKey(p.id)] || 0 }))
+    .filter((x) => x.n > 0)
+    .sort((a, b) => b.n - a.n);
+  const ranked = scored.map((x) => ({ ...x, rank: 1 + scored.filter((y) => y.n > x.n).length })).filter((x) => x.rank <= 5);
+  return (
+    <section className="card">
+      <h2>🏆 좋아요 TOP 5</h2>
+      {ranked.length === 0 && <p className="tip">좋아요를 받은 작품이 없어요.</p>}
+      <ol className="top5">
+        {ranked.map(({ p, n, rank }) => (
+          <li key={p.id}>
+            <span className="top5-rank">{rank}위</span>
+            <img src={thumbOf(p)} alt="" loading="lazy" />
+            <div>
+              <strong>{p.title || "제목 없음"}</strong>
+              {p.by && <span className="top5-by">{p.by}</span>}
+              <span className="top5-by">{zoneOf(zones, p.zone).name}</span>
+            </div>
+            <b className="hearts">♥ {n}</b>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

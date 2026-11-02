@@ -290,3 +290,13 @@ input, select { font: inherit; }
 .like.closed:active { transform: none; }
 .closed-note { background: #f3e7d3; color: #6b5338; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; text-align: center; line-height: 1.5; word-break: keep-all; }
 .talk .closed-note { margin-bottom: 0; }
+
+/* ── 관리: 좋아요 TOP 5 ── */
+.top5 { list-style: none; display: grid; gap: 8px; }
+.top5 li { display: grid; grid-template-columns: auto 64px 1fr auto; gap: 10px; align-items: center; background: #fbf6ec; border-radius: 14px; padding: 8px 12px; }
+.top5 img { width: 64px; height: 64px; object-fit: cover; border-radius: 10px; }
+.top5 li > div { display: grid; gap: 2px; min-width: 0; }
+.top5 strong { word-break: keep-all; }
+.top5-rank { font-family: Jua, sans-serif; font-size: 20px; color: #c98a2e; }
+.top5-by { display: block; font-size: 13px; color: #9a8467; word-break: break-word; }
+.top5 .hearts { margin: 0; font-size: 18px; white-space: nowrap; }
