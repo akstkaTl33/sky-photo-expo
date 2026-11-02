@@ -1,9 +1,11 @@
 import { admin, fail, noSecret, pinOk, okPhoto } from "../../../lib/server";
+import { votingOpen, CLOSED_MESSAGE } from "../../../lib/store";
 
 // 댓글: 누구나 쓰고(내용만), 지우기는 관리 비밀번호가 있어야 한다.
 export const dynamic = "force-dynamic";
 
 export async function POST(req) {
+  if (!votingOpen()) return fail(CLOSED_MESSAGE, 403);
   if (!admin) return noSecret();
   const { photo, body } = await req.json().catch(() => ({}));
   const text = typeof body === "string" ? body.trim() : "";

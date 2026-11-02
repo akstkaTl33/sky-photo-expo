@@ -1,4 +1,5 @@
 import { admin, fail, noSecret, voterOf, okPhoto } from "../../../lib/server";
+import { votingOpen, CLOSED_MESSAGE } from "../../../lib/store";
 
 // 좋아요: 같은 인터넷 연결(IP)은 하루에 DAILY개까지, 작품마다 하루 1번. 날짜는 한국 시간 자정에 바뀐다.
 // 표의 기본키(photo, voter, day)가 같은 날 두 번째 표를, 표의 트리거(supabase/daily-votes.sql)가 11번째 표를 막는다.
@@ -24,6 +25,7 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
+  if (!votingOpen()) return fail(CLOSED_MESSAGE, 403);
   if (!admin) return noSecret();
   const { photo } = await req.json().catch(() => ({}));
   if (!okPhoto(photo)) return fail("작품을 찾지 못했어요.");
