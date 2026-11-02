@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { DEFAULT_ZONES, MAX_ZONES, COLORS, loadZones, saveZones, zoneOf, checkPin, rememberAdmin, adminPin, loadPhotos, sortPhotos, addPhoto, updatePhoto, shrinkImage, uploadPhoto, loadVotes, photoKey } from "../../lib/store";
+import { DEFAULT_ZONES, MAX_ZONES, COLORS, loadZones, saveZones, zoneOf, checkPin, rememberAdmin, adminPin, loadPhotos, sortPhotos, addPhoto, updatePhoto, shrinkImage, uploadPhoto, loadVotes, photoKey, thumbOf, THUMB_PX } from "../../lib/store";
 
 export default function Admin() {
   const [ok, setOk] = useState(false);
@@ -84,8 +84,10 @@ function Manager() {
         setBusy(`${i + 1} / ${drafts.length} 작품을 거는 중…`);
         const d = drafts[i];
         const { blob, w, h } = await shrinkImage(d.file);
+        const small = await shrinkImage(d.file, THUMB_PX, 0.72);
         const img = await uploadPhoto(blob);
-        await addPhoto({ title: d.title.trim(), by: d.by.trim(), zone, img, w, h });
+        const thumb = await uploadPhoto(small.blob);
+        await addPhoto({ title: d.title.trim(), by: d.by.trim(), zone, img, thumb, w, h });
       }
       setDrafts([]);
       setView(zone);
@@ -201,7 +203,7 @@ function Item({ p, zones, n, onSave, onUp, onDown, first, last }) {
   const dirty = title !== (p.title || "") || by !== (p.by || "");
   return (
     <div className={`item${p.hidden ? " hid" : ""}`}>
-      <img src={p.img} alt="" />
+      <img src={thumbOf(p)} alt="" loading="lazy" />
       <div className="item-body">
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="작품 이름" />
         <input value={by} onChange={(e) => setBy(e.target.value)} placeholder="찍은 사람" />

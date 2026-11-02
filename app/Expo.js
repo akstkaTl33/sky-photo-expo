@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadZones, visibleZones, zoneOf, loadPhotos, sortPhotos, loadVotes, loadMyVotes, castVote, photoKey, loadComments, addComment, deleteComment, adminPin } from "../lib/store";
+import { loadZones, visibleZones, zoneOf, loadPhotos, sortPhotos, loadVotes, loadMyVotes, castVote, photoKey, loadComments, addComment, deleteComment, adminPin, thumbOf } from "../lib/store";
 
 // 로비 그림(1672×941) 기준 좌표
 const IW = 1672, IH = 941;
@@ -70,8 +70,9 @@ export default function Expo({ startZone = null }) {
     refreshLikes();
     refreshComments();
     refreshZones();
-    const t1 = setInterval(() => { refreshPhotos(); refreshComments(); refreshZones(); }, 30000);
-    const t2 = setInterval(refreshLikes, 10000);
+    // 무료 전송량을 아끼려고 드물게, 화면을 보고 있을 때만 새로 읽는다.
+    const t1 = setInterval(() => { if (!document.hidden) { refreshPhotos(); refreshComments(); refreshZones(); } }, 300000);
+    const t2 = setInterval(() => { if (!document.hidden) refreshLikes(); }, 60000);
     setGuide(true); // 사이트에 들어올 때마다 관람 안내를 먼저 띄운다
     const pop = () => {
       const m = new URLSearchParams(location.search).get("z");
@@ -240,7 +241,7 @@ export default function Expo({ startZone = null }) {
             <button key={p.id} className="wall-frame" style={{ left: s.x * k, top: s.y * k, width: s.w * k, height: s.h * k }}
               onClick={tapLobby(() => enter(Number(p.zone), Math.max(0, seen.filter((q) => Number(q.zone) === Number(p.zone)).findIndex((q) => q.id === p.id))))}
               aria-label={`${p.title} 보러 가기`} tabIndex={zone ? -1 : 0}>
-              <img src={p.img} alt="" draggable={false} />
+              <img src={thumbOf(p)} alt="" draggable={false} />
             </button>
           );
         })}
@@ -303,7 +304,7 @@ export default function Expo({ startZone = null }) {
                   onClick={() => { if (drag.current?.moved) return; on ? tapPhoto(p) : setIdx(i); }}>
                   <figure className="frame">
                     <div className="mat">
-                      <img src={p.img} alt={p.title} draggable={false} loading={a < 2.5 ? "eager" : "lazy"} />
+                      <img src={on ? p.img : thumbOf(p)} alt={p.title} draggable={false} loading={a < 2.5 ? "eager" : "lazy"} />
                       {burst && burst.startsWith(p.id + "|") && <span key={burst} className="burst">♥</span>}
                     </div>
                   </figure>
