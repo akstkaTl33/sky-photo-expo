@@ -368,9 +368,7 @@ export default function Expo({ startZone = null }) {
                     💬 댓글 <b>{talkOf(cur).length}</b>
                   </button>
                 </div>
-                {open
-                  ? left != null && <div className="like-left">오늘 남은 좋아요 <b>{left}</b> / {daily} · {VOTE_END_TEXT} 마감</div>
-                  : <div className="like-left">좋아요·댓글이 마감되어 관람만 할 수 있어요</div>}
+                {open && left != null && <div className="like-left">오늘 남은 좋아요 <b>{left}</b> / {daily} · {VOTE_END_TEXT} 마감</div>}
               </div>
             )}
           </div>
@@ -420,9 +418,7 @@ export default function Expo({ startZone = null }) {
                   <p>작품 아래 <span>♥ 좋아요</span> 단추를 누르거나 사진을 두 번 톡톡 누르면 돼요. 하루에 {daily}개까지, 같은 작품은 하루 한 번 누를 수 있어요. 좋아요와 댓글은 <span>{VOTE_END_TEXT}</span>까지 받아요.</p>
                 </div>
               </div>
-            ) : (
-              <p className="closed-note">좋아요와 댓글은 {VOTE_END_TEXT}에 마감되었어요. 지금은 전시를 관람하실 수 있어요.</p>
-            )}
+            ) : null}
             <button className="btn primary" onClick={() => setGuide(false)}>{open ? "♥ 좋아요 누르러 전시 보러 가기" : "🖼️ 전시 보러 가기"}</button>
           </div>
         </div>
@@ -485,9 +481,7 @@ function Comments({ photo, list, open, onClose, onAdd, onRemove }) {
             <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={300} rows={2} placeholder="작품에 응원의 말을 남겨 주세요" />
             <button className="btn primary" disabled={busy || !text.trim()}>{busy ? "올리는 중…" : "올리기"}</button>
           </form>
-        ) : (
-          <p className="closed-note">{CLOSED_MESSAGE}</p>
-        )}
+        ) : null}
       </div>
     </div>
   );
